@@ -14,9 +14,18 @@ Nota: Asegúrate de incluir una estructura HTML válida en la plantilla.
 from flask import Flask, render_template_string
 
 # Implementa la plantilla HTML aquí
+# Implementa la plantilla HTML aquí
 TEMPLATE = """
 <!doctype html>
-...
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Saludo</title>
+  </head>
+  <body>
+    <h1>¡Hola, {{ nombre }}!</h1>
+    <p>Bienvenido/a a nuestra pequeña aplicación Flask con Jinja2.</p>
+  </body>
 </html>
 """
 
@@ -33,7 +42,7 @@ def create_app():
         """
         # Utiliza render_template_string para renderizar la plantilla con el nombre proporcionado:
 
-        pass
+        return render_template_string(TEMPLATE, nombre=nombre)
 
     return app
 
