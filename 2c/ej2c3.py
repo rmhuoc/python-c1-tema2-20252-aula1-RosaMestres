@@ -64,7 +64,43 @@ def create_app():
         # 1. Obtén los parámetros de consulta usando request.args
         # 2. Filtra la lista de productos según los parámetros proporcionados
         # 3. Devuelve la lista filtrada en formato JSON con código 200
-        pass
+        # 1. Obtener parámetros de consulta
+        category = request.args.get("category")
+        min_price = request.args.get("min_price")
+        max_price = request.args.get("max_price")
+        name = request.args.get("name")
+
+        # 2. Empezamos con todos los productos
+        filtered = products
+
+        # 3. Aplicar filtros uno a uno si están presentes
+
+        if category:
+            filtered = [p for p in filtered if p["category"] == category]
+
+        if min_price is not None:
+            try:
+                min_val = float(min_price)
+                filtered = [p for p in filtered if p["price"] >= min_val]
+            except ValueError:
+                # Si min_price no es numérico, simplemente no filtramos por precio mínimo
+                pass
+
+        if max_price is not None:
+            try:
+                max_val = float(max_price)
+                filtered = [p for p in filtered if p["price"] <= max_val]
+            except ValueError:
+                # Si max_price no es numérico, no filtramos por precio máximo
+                pass
+
+        if name:
+            name_lower = name.lower()
+            filtered = [p for p in filtered if name_lower in p["name"].lower()]
+
+        # 4. Devolver lista filtrada (aunque esté vacía) con código 200
+        return jsonify(filtered), 200
+
 
     return app
 
