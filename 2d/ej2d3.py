@@ -64,7 +64,8 @@ def create_app():
         # Implementa este manejador de errores
         # 1. Registra el error usando app.logger.warning() con un mensaje descriptivo
         # 2. Devuelve un JSON con un mensaje descriptivo y el código de estado 400
-        pass
+        app.logger.warning(f"400 Bad Request en {request.path}: {error}")
+        return jsonify({"error":"Bad request", "message": "Solicitud incorrecta o datos erroneos"}),400
 
     # Manejador de errores 404 - Not Found
     @app.errorhandler(404)
@@ -76,7 +77,8 @@ def create_app():
         # Implementa este manejador de errores
         # 1. Registra el error usando app.logger.info() con un mensaje descriptivo
         # 2. Devuelve un JSON con un mensaje descriptivo y el código de estado 404
-        pass
+        app.logger.info(f"404 Not Found en {request.path}: {error}")
+        return jsonify({"error":"Not Found", "message": "Recurso no encontrado"}),404
 
     # Manejador de errores 405 - Method Not Allowed
     @app.errorhandler(405)
@@ -88,7 +90,8 @@ def create_app():
         # Implementa este manejador de errores
         # 1. Registra el error usando app.logger.warning() con un mensaje descriptivo
         # 2. Devuelve un JSON con un mensaje descriptivo y el código de estado 405
-        pass
+        app.logger.warning(f"405 Method not Allowed en {request.path}: {error}")
+        return jsonify({"error":"Method not Allowed", "message": "Metodo HTTP o permitido"}),405
 
     # Manejador de errores 500 - Internal Server Error
     @app.errorhandler(500)
@@ -101,7 +104,8 @@ def create_app():
         # 1. Registra el error usando app.logger.error() con los detalles del error
         # 2. Incluye información adicional como la ruta que causó el error utilizando request.path
         # 3. Devuelve un JSON con un mensaje descriptivo y el código de estado 500
-        pass
+        app.logger.error(f"500 Internal SErver Error en {request.path}: {error}",exc_info=True)
+        return jsonify({"error":"Internal Server Error", "message": "Error interno del servidor"}),500
 
     @app.route('/animals', methods=['GET'])
     def get_animals():
@@ -109,7 +113,7 @@ def create_app():
         Devuelve la lista completa de animales
         """
         # Implementa este endpoint para devolver la lista de animales
-        pass
+        return jsonify(animals),200
 
     @app.route('/animals/<int:animal_id>', methods=['GET'])
     def get_animal(animal_id):
@@ -119,7 +123,10 @@ def create_app():
         """
         # Implementa este endpoint para devolver un animal por su ID
         # si no existe, usa abort(404) para lanzar un error 404
-        pass
+        animal = next ((a for a in animals if a["id"] == animal_id),None)
+        if animal is None:
+            abort(404)
+        return jsonify(animal),200
 
     @app.route('/animals', methods=['POST'])
     def add_animal():
@@ -133,7 +140,25 @@ def create_app():
         # 2. Verifica que los campos "name" y "species" estén presentes
         # 3. Si falta algún campo, usa abort(400) para lanzar un error
         # 4. Si todo está correcto, agrega el nuevo animal a la lista y devuelve una respuesta adecuada (código 201)
-        pass
+        global next_id
+        # check jason
+        data = request.get_json(silent = True)
+        if not isinstance(data,dict):
+            abort(400)
+
+        # check field
+        name = data.get("name")
+        species = data.get("species")
+        if not name or not species:
+            abort(400)
+        
+        new_animal = {"id":next_id, "name":name, "species":species}
+        animals.append(new_animal)
+        next_id += 1
+
+        return jsonify(new_animal),201
+    
+
 
     @app.route('/animals/<int:animal_id>', methods=['DELETE'])
     def delete_animal(animal_id):
@@ -145,7 +170,12 @@ def create_app():
         # 1. Verifica si el animal existe
         # 2. Si no existe, usa abort(404) para lanzar un error 404
         # 3. Si existe, elimínalo de la lista y devuelve una respuesta adecuada
-        pass
+        idx = next ((i for i, a in enumerate(animals) if a["id"] == animal_id), None)
+        if idx is None:
+            abort(404)
+
+        deleted = animals.pop(idx)
+        return "", 204
 
     # Endpoint adicional que lanza un error 500 para probar el manejador
     @app.route('/test-error', methods=['GET'])
@@ -154,7 +184,7 @@ def create_app():
         Endpoint de prueba que lanza un error 500 intencionalmente
         """
         # Lanza una excepción para probar el manejador de error 500
-        pass
+        raise RuntimeError("Error intencional para probarl em najeador 500")
 
     return app
 
