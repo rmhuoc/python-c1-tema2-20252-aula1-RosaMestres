@@ -31,7 +31,7 @@ Esta actividad te enseñará cómo acceder y manipular datos de las solicitudes 
 una habilidad fundamental para crear APIs robustas y aplicaciones web interactivas.
 """
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, Response
 import re
 
 def create_app():
@@ -51,6 +51,9 @@ def create_app():
         # 2. Convierte los encabezados a un formato adecuado para JSON
         # 3. Devuelve los encabezados como respuesta JSON
 
+        headers_dict = dict(request.headers)
+        return jsonify(headers_dict),200
+
 
 
     @app.route('/browser', methods=['GET'])
@@ -66,7 +69,45 @@ def create_app():
         #    - El sistema operativo (Windows, macOS, Android, iOS, etc.)
         #    - Si es un dispositivo móvil (detecta cadenas como "Mobile", "Android", "iPhone")
         # 3. Devuelve la información como respuesta JSON
-        pass
+        ua = request.headers.get("User-Agent","")
+
+        ua_lower = ua.lower()
+
+        if "edg" in ua_lower:
+            browser = "Edge"
+        elif "chrome" in ua_lower and "safari" in ua_lower:
+            browser = "Chrome"
+        elif "firefox" in ua_lower:
+            browser = "Firefox"
+        elif "safari" in ua_lower and "chrome" not in ua_lower:
+            browser = "Safari"
+        else:
+            browser = "Unknown"
+            
+
+        if "iphone" in ua_lower or "ipad" in ua_lower or "ios" in ua_lower:
+            os_name = "iOS"
+        elif "android" in ua_lower:
+            os_name = "Android"
+        elif "windows" in ua_lower:
+            os_name = "Windows"
+        elif "mac os x" in ua_lower or "macintosh" in ua_lower:
+            os_name = "macOS"
+        elif "linux" in ua_lower:
+            os_name = "Linux"
+        else:
+            os_name = "Unknown"
+
+        
+        is_mobile = any(token in ua_lower for token in  ["mobile","android","iPhone","ipad"])
+
+        return jsonify({
+            "user_agent": ua,
+            "browser": browser,
+            "os": os_name,
+            "is_mobile": is_mobile
+        }),200
+
 
     @app.route('/echo', methods=['POST'])
     def echo():
@@ -81,7 +122,21 @@ def create_app():
         #    - Para form data: usa request.form
         #    - Para texto plano: usa request.data
         # 3. Devuelve los mismos datos con el mismo tipo de contenido
-        pass
+        mimetype = request.mimetype or ""
+
+        if mimetype == "application/json":
+            data = request.get_json(silent=True)
+            if data is None:
+                return Response(request.get_data(),mimetype="application/json")
+            return jsonify(data),200
+        
+        if mimetype in ("application/x-www-form-urlencoded", "multipart/form-data"):
+            form_dict = request.form.to_dict(flat=True)
+            return jsonify(form_dict),200
+        
+        raw = request.get_data()
+        return Response(raw,mimetype=mimetype if mimetype else "text/plain"),200
+
 
     @app.route('/validate-id', methods=['POST'])
     def validate_id():
@@ -95,7 +150,23 @@ def create_app():
         # 1. Obtén el campo "id_number" del JSON enviado
         # 2. Valida que cumpla con las reglas especificadas
         # 3. Devuelve un JSON con el resultado de la validación
-        pass
+        data = request.get_json(silent=True)
+        if not isinstance(data,dict) or "id_number" not in data:
+            return jsonify({
+                "error": "Bad Request",
+                "message": "Falta el campo 'id_number' en el JSON",
+                "valid": False
+            }),400
+        id_number = str(data.get("id_number",""))
+
+        pattern = r"^\d{8}[A-Za-z]$"
+        is_valid = re.fullmatch(pattern,id_number) is not None
+
+        return jsonify({
+            "id_number": id_number,
+            "valid": is_valid
+        }),200
+        
 
     return app
 
