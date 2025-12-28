@@ -38,6 +38,7 @@ una habilidad esencial para el desarrollo de APIs y servicios web que manejan di
 from flask import Flask, jsonify, Response, send_file, make_response
 import os
 import io
+import base64
 
 def create_app():
     """
@@ -51,7 +52,9 @@ def create_app():
         Devuelve un texto plano con el tipo MIME `text/plain`
         """
         # Implementa este endpoint para devolver el contenido solicitado
-        pass
+        resp = Response("Este es un texto plano")
+        resp.headers["Content-Type"] = "text/plain"
+        return resp
 
     @app.route('/html', methods=['GET'])
     def get_html():
@@ -59,7 +62,9 @@ def create_app():
         Devuelve un fragmento HTML con el tipo MIME `text/html`
         """
         # Implementa este endpoint para devolver el contenido solicitado
-        pass
+        resp = Response("<h1>Este es un fragmento HTML</h1>")
+        resp.headers["Content-Type"] = "text/html"
+        return resp
 
     @app.route('/json', methods=['GET'])
     def get_json():
@@ -67,7 +72,7 @@ def create_app():
         Devuelve un objeto JSON con el tipo MIME `application/json`
         """
         # Implementa este endpoint para devolver el contenido solicitado
-        pass
+        return jsonify({"mensaje": "Este es un objeto JSON"})
 
     @app.route('/xml', methods=['GET'])
     def get_xml():
@@ -75,7 +80,9 @@ def create_app():
         Devuelve un documento XML con el tipo MIME `application/xml`
         """
         # Implementa este endpoint para devolver el contenido solicitado
-        pass
+        resp = Response ("<mensaje>Este es un documento XML</mensaje>")
+        resp.headers["Content-Type"] = "application/xml"
+        return resp
 
     @app.route('/image', methods=['GET'])
     def get_image():
@@ -84,7 +91,19 @@ def create_app():
         """
         # Implementa este endpoint para devolver el contenido solicitado
         # Sugerencia: Puedes usar send_file para enviar una imagen
-        pass
+        png_b64 = (
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMA"
+            "ASsJTYQAAAAASUVORK5CYII="
+        )
+        png_bytes = base64.b64decode(png_b64)
+        img_io = io.BytesIO(png_bytes)
+        img_io.seek(0)
+        return send_file(
+            img_io,
+            mimetype="image/png",
+            as_attachment=False,
+            download_name="pixel.png"
+        )
 
     @app.route('/binary', methods=['GET'])
     def get_binary():
@@ -94,7 +113,11 @@ def create_app():
         """
         # Implementa este endpoint para devolver el contenido solicitado
         # Sugerencia: Puedes usar os.urandom() para generar datos aleatorios
-        pass
+        data = os.urandom(64)
+        resp = make_response(data)
+        resp.headers["Content-Type"] = "application/octet-stream"
+        resp.headers["Content-Disposition"] = 'attachment; filename="random.bin"'
+        return resp
 
     return app
 
