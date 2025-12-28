@@ -36,6 +36,8 @@ una habilidad esencial para desarrollar APIs web que interactúan con diversos c
 
 from flask import Flask, jsonify, request, Response
 import os
+import uuid
+from datetime import datetime
 
 def create_app():
     """
@@ -56,7 +58,16 @@ def create_app():
         # 1. Verifica que el Content-Type sea text/plain
         # 2. Lee el contenido de la solicitud usando request.data
         # 3. Devuelve el mismo texto con Content-Type text/plain
-        pass
+        if request.mimetype != 'text/plain':
+            return jsonify({
+                "error": "Unsupported media type",
+                "expected": ["text/plain"],
+                "received": request.content_type,
+                "received_mimetype": request.mimetype
+        }),415
+
+        text = request.get_data(as_text=True)
+        return Response(text, status=200, content_type='text/plain')
 
     @app.route('/html', methods=['POST'])
     def post_html():
@@ -67,7 +78,17 @@ def create_app():
         # 1. Verifica que el Content-Type sea text/html
         # 2. Lee el contenido de la solicitud
         # 3. Devuelve el mismo HTML con Content-Type text/html
-        pass
+        if request.mimetype != 'text/html':
+            return jsonify({
+                "error": "Unsupported media type",
+                "expected": ["text/html"],
+                "received": request.content_type,
+                "received_mimetype": request.mimetype
+        }),415
+
+        html = request.get_data(as_text=True)
+        return Response(html, status=200, content_type='text/html')
+
 
     @app.route('/json', methods=['POST'])
     def post_json():
@@ -77,7 +98,19 @@ def create_app():
         # Implementa este endpoint:
         # 1. Accede al contenido JSON usando request.get_json()
         # 2. Devuelve el mismo objeto JSON usando jsonify()
-        pass
+        if request.mimetype != 'application/json':
+            return jsonify({
+                "error": "Unsupported media type",
+                "expected": ["application/json"],
+                "received": request.content_type,
+                "received_mimetype": request.mimetype
+        }),415
+
+        data = request.get_json(silent=True)
+        if data is None:
+            return jsonify({"error":"Invalid JSON"}),400
+        
+        return jsonify(data),200
 
     @app.route('/xml', methods=['POST'])
     def post_xml():
@@ -88,7 +121,16 @@ def create_app():
         # 1. Verifica que el Content-Type sea application/xml
         # 2. Lee el contenido XML de la solicitud
         # 3. Devuelve el mismo XML con Content-Type application/xml
-        pass
+        if request.mimetype != 'application/xml':
+            return jsonify({
+                "error": "Unsupported media type",
+                "expected": ["application/xml"],
+                "received": request.content_type,
+                "received_mimetype": request.mimetype
+        }),415
+
+        xml_text = request.get_data(as_text=True)
+        return Response(xml_text, status=200, content_type='application/xml')
 
     @app.route('/image', methods=['POST'])
     def post_image():
@@ -100,8 +142,30 @@ def create_app():
         # 2. Lee los datos binarios de la imagen
         # 3. Guarda la imagen en el directorio 'uploads' con un nombre único
         # 4. Devuelve una confirmación con el nombre del archivo guardado
-        pass
+        if request.mimetype not in ('image/png', 'image/jpeg'):
+            return jsonify({
+                "error": "Unsupported media type",
+                "expected": ["image/png", "image/jpeg"],
+                "received": request.content_type,
+                "received_mimetype": request.mimetype
+        }),415
 
+        img_bytes = request.data
+        if not img_bytes:
+            return jsonify({"error": "Empty image body"},400)
+        
+        ext = 'png' if request.mimetype == 'image/png' else 'jpg'
+        filename = f"img_{datetime.utcnow().strftime('%Y%m%dT%H%M%S')}_{uuid.uuid4().hex}.{ext}"
+        filepath = os.path.join(uploads_dir, filename)
+
+        with open(filepath, 'wb') as f:
+            f.write(img_bytes)
+
+        return jsonify({
+            "message": "Image saved",
+            "filename": filename,
+            "bytes": len(img_bytes)
+        }), 200
     @app.route('/binary', methods=['POST'])
     def post_binary():
         """
@@ -112,7 +176,27 @@ def create_app():
         # 2. Lee los datos binarios de la solicitud
         # 3. Guarda los datos en un archivo o simplemente verifica su tamaño
         # 4. Devuelve una confirmación con información sobre los datos recibidos
-        pass
+        if request.mimetype != 'application/octet-stream':
+            return jsonify({
+                "error": "Unsupported Media Type",
+                "expected": ["application/octet-stream"],
+                "received": request.content_type,
+                "received_mimetype": request.mimetype
+            }), 415
+
+        blob = request.data or b""
+
+        filename = f"bin_{datetime.utcnow().strftime('%Y%m%dT%H%M%S')}_{uuid.uuid4().hex}.bin"
+        filepath = os.path.join(uploads_dir, filename)
+
+        with open(filepath, 'wb') as f:
+            f.write(blob)
+
+        return jsonify({
+            "mensaje": "Binary data received",
+            "filename": filename,
+            "tamaño": len(blob)
+        }), 200
 
     return app
 
